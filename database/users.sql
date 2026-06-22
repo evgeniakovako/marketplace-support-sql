@@ -9,6 +9,11 @@ CREATE TABLE users (
     email VARCHAR(100),
     phone VARCHAR(20),
     city VARCHAR(50),
+    country VARCHAR(50),
     registration_date DATE,
-    status VARCHAR(20)
+    last_activity DATETIME,
+    status VARCHAR(20),
+    email_verified BOOLEAN,
+    phone_verified BOOLEAN,
+    account_type VARCHAR(20)
 );
