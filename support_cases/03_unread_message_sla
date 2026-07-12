@@ -1,1 +1,13 @@
+USE marketplace_support;
+SET @as_of = TIMESTAMP('2026-07-10 12:00:00');
+-- Business question: Which unread messages breached the 24-hour read SLA?
+-- Expected insight: the result is an operational follow-up queue for recipients.
+SELECT m.message_id, a.title, sender.full_name AS sender, receiver.full_name AS recipient,
+       m.sent_at, TIMESTAMPDIFF(HOUR, m.sent_at, @as_of) AS waiting_hours
+FROM messages m
+JOIN ads a ON a.ad_id = m.ad_id
+JOIN users sender ON sender.user_id = m.sender_id
+JOIN users receiver ON receiver.user_id = m.receiver_id
+WHERE m.is_read = FALSE AND m.sent_at < @as_of - INTERVAL 24 HOUR
+ORDER BY waiting_hours DESC;
 
