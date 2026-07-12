@@ -1,1 +1,96 @@
+-- Marketplace Support SQL
+-- Requires MySQL 8.0.16+ because CHECK constraints are enforced from that version.
+
+CREATE DATABASE IF NOT EXISTS marketplace_support
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
+
+USE marketplace_support;
+
+DROP TABLE IF EXISTS support_tickets;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS ads;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    user_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    country VARCHAR(50) NOT NULL,
+    registration_date DATE NOT NULL,
+    last_activity DATETIME NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    account_type VARCHAR(20) NOT NULL DEFAULT 'buyer',
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT uq_users_phone UNIQUE (phone),
+    CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'suspended')),
+    CONSTRAINT chk_users_account_type CHECK (account_type IN ('buyer', 'seller', 'business'))
+);
+
+CREATE TABLE ads (
+    ad_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    `condition` VARCHAR(30) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ads_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT chk_ads_price CHECK (price >= 0),
+    CONSTRAINT chk_ads_condition CHECK (`condition` IN ('new', 'like_new', 'good', 'fair')),
+    CONSTRAINT chk_ads_status CHECK (status IN ('active', 'paused', 'sold', 'removed')),
+    INDEX idx_ads_user_status (user_id, status),
+    INDEX idx_ads_category_city (category, city)
+);
+
+CREATE TABLE messages (
+    message_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sender_id INT UNSIGNED NOT NULL,
+    receiver_id INT UNSIGNED NOT NULL,
+    ad_id INT UNSIGNED NOT NULL,
+    message_text TEXT NOT NULL,
+    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES users(user_id),
+    CONSTRAINT fk_messages_receiver FOREIGN KEY (receiver_id) REFERENCES users(user_id),
+    CONSTRAINT fk_messages_ad FOREIGN KEY (ad_id) REFERENCES ads(ad_id),
+    CONSTRAINT chk_messages_participants CHECK (sender_id <> receiver_id),
+    INDEX idx_messages_receiver_read_sent (receiver_id, is_read, sent_at),
+    INDEX idx_messages_ad_sent (ad_id, sent_at)
+);
+
+CREATE TABLE support_tickets (
+    ticket_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    ad_id INT UNSIGNED NULL,
+    subject VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(20) NOT NULL,
+    priority VARCHAR(10) NOT NULL DEFAULT 'medium',
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    assigned_to VARCHAR(100) NOT NULL,
+    CONSTRAINT fk_tickets_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_tickets_ad FOREIGN KEY (ad_id) REFERENCES ads(ad_id),
+    CONSTRAINT chk_tickets_category CHECK (category IN ('account', 'listing', 'messaging', 'payment')),
+    CONSTRAINT chk_tickets_priority CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    CONSTRAINT chk_tickets_status CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    CONSTRAINT chk_tickets_resolution CHECK (
+        (status IN ('resolved', 'closed') AND resolved_at IS NOT NULL)
+        OR (status IN ('open', 'in_progress') AND resolved_at IS NULL)
+    ),
+    INDEX idx_tickets_status_priority_created (status, priority, created_at),
+    INDEX idx_tickets_assignee_status (assigned_to, status),
+    INDEX idx_tickets_category_created (category, created_at)
+);
 
