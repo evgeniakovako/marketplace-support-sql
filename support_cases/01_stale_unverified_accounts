@@ -1,1 +1,15 @@
+USE marketplace_support;
+SET @as_of = TIMESTAMP('2026-07-10 12:00:00');
+-- Business question: Which accounts need verification or re-engagement outreach?
+-- Expected insight: inactive users with an unverified contact method are the highest-priority group.
+SELECT user_id, full_name, email, city, last_activity,
+       CASE WHEN email_verified = FALSE AND phone_verified = FALSE THEN 'verify_email_and_phone'
+            WHEN email_verified = FALSE THEN 'verify_email'
+            WHEN phone_verified = FALSE THEN 'verify_phone'
+            ELSE 're_engage' END AS recommended_action,
+       TIMESTAMPDIFF(DAY, last_activity, @as_of) AS inactive_days
+FROM users
+WHERE status = 'inactive'
+  AND (email_verified = FALSE OR phone_verified = FALSE OR last_activity < @as_of - INTERVAL 30 DAY)
+ORDER BY inactive_days DESC;
 
