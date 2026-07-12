@@ -1,1 +1,16 @@
+USE marketplace_support;
+-- Business question: How is active ticket workload distributed across support agents?
+-- Expected insight: the rank makes uneven workload immediately visible.
+WITH agent_workload AS (
+    SELECT assigned_to,
+           COUNT(*) AS active_tickets,
+           SUM(priority IN ('high', 'urgent')) AS high_priority_tickets
+    FROM support_tickets
+    WHERE status IN ('open', 'in_progress')
+    GROUP BY assigned_to
+)
+SELECT assigned_to, active_tickets, high_priority_tickets,
+       DENSE_RANK() OVER (ORDER BY active_tickets DESC, high_priority_tickets DESC) AS workload_rank
+FROM agent_workload
+ORDER BY workload_rank, assigned_to;
 
