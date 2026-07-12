@@ -1,1 +1,16 @@
+USE marketplace_support;
+-- Business question: Which cities generate the largest support workload?
+-- Expected insight: support demand can be compared with the size of the local user base.
+WITH city_users AS (
+    SELECT city, COUNT(*) AS users_count FROM users GROUP BY city
+), city_tickets AS (
+    SELECT u.city, COUNT(*) AS tickets_count
+    FROM support_tickets t JOIN users u ON u.user_id = t.user_id
+    GROUP BY u.city
+)
+SELECT cu.city, cu.users_count, COALESCE(ct.tickets_count, 0) AS tickets_count,
+       ROUND(COALESCE(ct.tickets_count, 0) / cu.users_count, 2) AS tickets_per_user
+FROM city_users cu
+LEFT JOIN city_tickets ct ON ct.city = cu.city
+ORDER BY tickets_per_user DESC, tickets_count DESC;
 
