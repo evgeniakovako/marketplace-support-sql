@@ -1,1 +1,13 @@
+USE marketplace_support;
+-- Business question: Which active listings have not received buyer interest?
+-- Expected insight: sellers can be prompted to improve listings with zero incoming messages.
+SELECT a.ad_id, a.title, a.category, a.city, u.full_name AS seller_name,
+       COUNT(m.message_id) AS received_messages
+FROM ads a
+JOIN users u ON u.user_id = a.user_id
+LEFT JOIN messages m ON m.ad_id = a.ad_id AND m.receiver_id = a.user_id
+WHERE a.status = 'active'
+GROUP BY a.ad_id, a.title, a.category, a.city, u.full_name
+HAVING COUNT(m.message_id) = 0
+ORDER BY a.created_at;
 
