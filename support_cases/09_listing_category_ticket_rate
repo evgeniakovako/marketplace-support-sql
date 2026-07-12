@@ -1,1 +1,12 @@
+USE marketplace_support;
+-- Business question: Which listing categories generate the most listing-related tickets relative to volume?
+-- Expected insight: a high rate points to category-specific guidance or moderation problems.
+SELECT a.category,
+       COUNT(DISTINCT a.ad_id) AS ads_count,
+       COUNT(t.ticket_id) AS listing_tickets,
+       ROUND(COUNT(t.ticket_id) / NULLIF(COUNT(DISTINCT a.ad_id), 0), 2) AS tickets_per_ad
+FROM ads a
+LEFT JOIN support_tickets t ON t.ad_id = a.ad_id AND t.category = 'listing'
+GROUP BY a.category
+ORDER BY tickets_per_ad DESC, listing_tickets DESC;
 
