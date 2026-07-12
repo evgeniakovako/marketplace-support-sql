@@ -1,1 +1,34 @@
+USE marketplace_support;
+SET @as_of = TIMESTAMP('2026-07-10 12:00:00');
+
+-- Expected totals: 20 users, 20 ads, 28 messages, 22 tickets.
+SELECT 'users' AS entity, COUNT(*) AS actual_count, 20 AS expected_count FROM users
+UNION ALL SELECT 'ads', COUNT(*), 20 FROM ads
+UNION ALL SELECT 'messages', COUNT(*), 28 FROM messages
+UNION ALL SELECT 'support_tickets', COUNT(*), 22 FROM support_tickets;
+
+-- Every result below must be zero.
+SELECT 'ads_without_user' AS check_name, COUNT(*) AS invalid_rows
+FROM ads a LEFT JOIN users u ON u.user_id = a.user_id WHERE u.user_id IS NULL
+UNION ALL
+SELECT 'messages_without_user_or_ad', COUNT(*)
+FROM messages m
+LEFT JOIN users sender ON sender.user_id = m.sender_id
+LEFT JOIN users receiver ON receiver.user_id = m.receiver_id
+LEFT JOIN ads a ON a.ad_id = m.ad_id
+WHERE sender.user_id IS NULL OR receiver.user_id IS NULL OR a.ad_id IS NULL
+UNION ALL
+SELECT 'tickets_without_user_or_ad', COUNT(*)
+FROM support_tickets t
+LEFT JOIN users u ON u.user_id = t.user_id
+LEFT JOIN ads a ON a.ad_id = t.ad_id
+WHERE u.user_id IS NULL OR (t.ad_id IS NOT NULL AND a.ad_id IS NULL);
+
+-- Demonstrate the deliberately seeded edge cases.
+SELECT
+    SUM(status = 'inactive' AND (email_verified = FALSE OR phone_verified = FALSE)) AS inactive_unverified_users,
+    (SELECT COUNT(*) FROM messages WHERE is_read = FALSE AND sent_at < @as_of - INTERVAL 24 HOUR) AS unread_messages_over_24h,
+    (SELECT COUNT(*) FROM support_tickets WHERE status IN ('open', 'in_progress') AND priority IN ('high', 'urgent')) AS open_high_priority_tickets,
+    (SELECT COUNT(*) FROM support_tickets GROUP BY user_id HAVING COUNT(*) >= 2 LIMIT 1) AS repeated_contact_users_present
+FROM users;
 
