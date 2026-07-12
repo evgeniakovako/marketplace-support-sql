@@ -1,1 +1,12 @@
+USE marketplace_support;
+-- Business question: Which ticket categories take the longest to resolve?
+-- Expected insight: category-level resolution time identifies process bottlenecks.
+SELECT category,
+       COUNT(*) AS resolved_tickets,
+       ROUND(AVG(TIMESTAMPDIFF(HOUR, created_at, resolved_at)), 1) AS avg_resolution_hours,
+       MAX(TIMESTAMPDIFF(HOUR, created_at, resolved_at)) AS max_resolution_hours
+FROM support_tickets
+WHERE status IN ('resolved', 'closed')
+GROUP BY category
+ORDER BY avg_resolution_hours DESC;
 
