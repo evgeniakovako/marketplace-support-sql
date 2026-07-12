@@ -1,1 +1,11 @@
+USE marketplace_support;
+SET @as_of = TIMESTAMP('2026-07-10 12:00:00');
+-- Business question: In what order should the current ticket backlog be handled?
+-- Expected insight: urgent/high tickets are prioritised before lower-risk tickets of the same age.
+SELECT ticket_id, subject, category, priority, status, assigned_to, created_at,
+       TIMESTAMPDIFF(HOUR, created_at, @as_of) AS age_hours,
+       CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END AS priority_rank
+FROM support_tickets
+WHERE status IN ('open', 'in_progress')
+ORDER BY priority_rank, age_hours DESC;
 
