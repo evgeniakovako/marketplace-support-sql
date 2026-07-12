@@ -1,1 +1,19 @@
+USE marketplace_support;
+SET @user_id = 6;
+-- Business question: What is the chronological support history for one user?
+-- Expected insight: one timeline provides context before an agent responds to the next ticket.
+WITH support_events AS (
+    SELECT created_at AS event_at, 'ticket' AS event_type, subject AS details
+    FROM support_tickets WHERE user_id = @user_id
+    UNION ALL
+    SELECT sent_at, 'message_sent', LEFT(message_text, 100)
+    FROM messages WHERE sender_id = @user_id
+    UNION ALL
+    SELECT sent_at, 'message_received', LEFT(message_text, 100)
+    FROM messages WHERE receiver_id = @user_id
+)
+SELECT event_at, event_type, details,
+       LAG(event_at) OVER (ORDER BY event_at) AS previous_event_at
+FROM support_events
+ORDER BY event_at;
 
