@@ -1,1 +1,17 @@
+USE marketplace_support;
+-- Business question: Which users repeatedly contact support and what do they need?
+-- Expected insight: repeated issues can signal UX gaps or unresolved problems.
+WITH user_ticket_counts AS (
+    SELECT user_id, COUNT(*) AS ticket_count
+    FROM support_tickets
+    GROUP BY user_id
+    HAVING COUNT(*) >= 2
+)
+SELECT u.full_name, u.city, utc.ticket_count,
+       GROUP_CONCAT(DISTINCT t.category ORDER BY t.category SEPARATOR ', ') AS categories
+FROM user_ticket_counts utc
+JOIN users u ON u.user_id = utc.user_id
+JOIN support_tickets t ON t.user_id = utc.user_id
+GROUP BY u.user_id, u.full_name, u.city, utc.ticket_count
+ORDER BY utc.ticket_count DESC, u.full_name;
 
